@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#e8c547">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ClinicalRecall">
+<title>ClinicalRecall</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────
+   TOKENS
+───────────────────────────────────────── */
+:root {
+  --bg:       #0a0e1a;
+  --surface:  #111827;
+  --card:     #141e35;
+  --card2:    #0f1a2e;
+  --gold:     #e8c547;
+  --gold2:    #c9a227;
+  --teal:     #4ecdc4;
+  --red:      #ff6b6b;
+  --purple:   #c084fc;
+  --green:    #56cf87;
+  --orange:   #f9a826;
+  --text:     #eef0f4;
+  --muted:    #7a8899;
+  --border:   rgba(232,197,71,0.12);
+  --r:        16px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+/* ─────────────────────────────────────────
+   RESET & BASE
+───────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html { height:100%; overflow:hidden; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  overscroll-behavior: none;
+}
+
+/* ─────────────────────────────────────────
+   LAYOUT: 3-layer shell
+───────────────────────────────────────── */
+#shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bot);
+}
+
+/* ── TOP BAR ── */
+#topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px 10px;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  z-index: 20;
+}
+.logo-text {
+  font-family: 'Fraunces', serif;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  flex: 1;
+}
+.logo-text span { color: var(--gold); }
+.streak-pill {
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: #0a0e1a;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+#menuBtn {
+  width: 36px; height: 36px;
+  display: flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+#menuBtn span { display:block; width:16px; height:2px; background:var(--muted); border-radius:2px; transition:.2s; }
+
+/* ── CONTENT SCROLL AREA ── */
+#content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* ── BOTTOM NAV ── */
+#bottomnav {
+  flex-shrink: 0;
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  z-index: 20;
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px 6px;
+  cursor: pointer;
+  gap: 3px;
+  transition: all 0.2s;
+  position: relative;
+}
+.nav-item .nav-icon { font-size: 1.3rem; line-height:1; }
+.nav-item .nav-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+.nav-item.active .nav-label { color: var(--gold); }
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%; height: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--teal));
+  border-radius: 0 0 4px 4px;
+}
+
+/* ─────────────────────────────────────────
+   VIEWS
+───────────────────────────────────────── */
+.view { display: none; padding: 16px 16px 24px; }
+.view.active { display: block; }
+
+/* ─────────────────────────────────────────
+   HOME VIEW
+───────────────────────────────────────── */
+.home-hero {
+  background: linear-gradient(135deg, var(--card) 0%, var(--card2) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.home-hero::before {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,197,71,0.12), transparent 70%);
+}
+.hero-day {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+}
+.hero-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.hero-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.hero-prog-label {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.prog-bar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.prog-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal), var(--gold));
+  border-radius: 5px;
+  transition: width 0.8s cubic-bezier(.4,0,.2,1);
+}
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+}
+.stat-box {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.stat-val {
+  font-family: 'Fraunces', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 3px;
+}
+.stat-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Subject chips */
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin: 16px 0 10px;
+}
+.subject-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.subj-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.subj-card:active { transform: scale(0.97); }
+.subj-card.current { border-color: rgba(232,197,71,0.35); }
+.subj-card.current::before {
+  content: 'TODAY';
+  position: absolute;
+  top: 8px; right: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  color: var(--gold);
+  background: rgba(232,197,71,0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.subj-icon { font-size: 1.4rem; margin-bottom: 8px; line-height:1; }
+.subj-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.subj-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+}
+.subj-prog {
+  margin-top: 8px;
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.subj-prog-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--teal), var(--gold));
+}
+
+/* ─────────────────────────────────────────
+   CARDS VIEW
+───────────────────────────────────────── */
+.cards-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.back-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items:center; justify-content:center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cards-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex: 1;
+}
+.cards-count {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--muted);
+  background: rgba(255,255,255,0.05);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.card-list { display: flex; flex-direction: column; gap: 12px; }
+
+/* Single flashcard */
+.fc {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.fc.mastered { border-color: rgba(86,207,135,0.35); }
+.fc-front {
+  padding: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.fc-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+  min-width: 22px;
+  padding-top: 3px;
+}
+.fc-q { flex: 1; }
+.fc-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.fc-prompt {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.fc-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 3px 7px;
+  border-radius: 8px;
+  border: 1px solid;
+  white-space: nowrap;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+.b-triad   { color: var(--orange); border-color: rgba(249,168,38,0.3); background: rgba(249,168,38,0.07); }
+.b-sign    { color: var(--teal);   border-color: rgba(78,205,196,0.3);  background: rgba(78,205,196,0.07); }
+.b-tetrad  { color: var(--purple); border-color: rgba(192,132,252,0.3); background: rgba(192,132,252,0.07); }
+.b-pentad  { color: var(--red);    border-color: rgba(255,107,107,0.3); background: rgba(255,107,107,0.07); }
+.b-cluster { color: var(--green);  border-color: rgba(86,207,135,0.3);  background: rgba(86,207,135,0.07); }
+
+.fc-divider { height: 1px; background: var(--border); margin: 0 16px; }
+
+.fc-back {
+  display: none;
+  padding: 14px 16px 16px;
+  animation: slideIn 0.2s ease;
+}
+.fc-back.open { display: block; }
+@keyframes slideIn {
+  from { opacity:0; transform: translateY(-4px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+.back-block { margin-bottom: 12px; }
+.back-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.back-body {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+.back-body b { color: var(--gold); font-weight: 600; }
+.back-body em { color: var(--teal); font-style: normal; }
+.comp-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.comp-list li {
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+.comp-list li b { color: var(--gold); }
+.cond-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.cond-tag {
+  background: rgba(255,107,107,0.08);
+  border: 1px solid rgba(255,107,107,0.2);
+  color: var(--red);
+  font-size: 0.7rem;
+  font-family: 'DM Mono', monospace;
+  padding: 3px 9px;
+  border-radius: 10px;
+}
+.pearl-box {
+  background: linear-gradient(135deg, rgba(232,197,71,0.07), rgba(78,205,196,0.04));
+  border-left: 2.5px solid var(--gold);
+  border-radius: 0 10px 10px 0;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+.pearl-box b { color: var(--gold); }
+.pearl-box em { color: var(--teal); font-style: normal; }
+
+/* Rating row */
+.rate-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 14px;
+}
+.rate-btn {
+  padding: 8px 4px;
+  border-radius: 8px;
+  border: 1px solid;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  line-height: 1.3;
+}
+.rate-btn:active { transform: scale(0.95); }
+.rb-again { color:var(--red);    border-color:rgba(255,107,107,0.3); background:rgba(255,107,107,0.07); }
+.rb-hard  { color:var(--orange); border-color:rgba(249,168,38,0.3);  background:rgba(249,168,38,0.07); }
+.rb-good  { color:var(--teal);   border-color:rgba(78,205,196,0.3);  background:rgba(78,205,196,0.07); }
+.rb-easy  { color:var(--green);  border-color:rgba(86,207,135,0.3);  background:rgba(86,207,135,0.07); }
+
+/* ─────────────────────────────────────────
+   PROGRESS VIEW
+───────────────────────────────────────── */
+.prog-view-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.4rem;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+.prog-view-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.big-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.big-stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+}
+.big-stat-val {
+  font-family: 'Fraunces', serif;
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.big-stat-lbl {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.subj-prog-list { display: flex; flex-direction: column; gap: 10px; }
+.spl-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.spl-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.spl-icon { font-size: 1.2rem; }
+.spl-name { flex: 1; font-size: 0.85rem; font-weight: 500; }
+.spl-pct {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--gold);
+}
+.spl-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.spl-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--teal), var(--gold));
+  transition: width 0.6s ease;
+}
+
+/* ─────────────────────────────────────────
+   YEAR PLAN VIEW
+───────────────────────────────────────── */
+.plan-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.4rem;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+.plan-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.plan-list { display: flex; flex-direction: column; gap: 8px; }
+.plan-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.plan-item.plan-current { border-color: rgba(232,197,71,0.4); background: linear-gradient(135deg, rgba(232,197,71,0.06), var(--card)); }
+.plan-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.plan-dot.d-current { background: var(--gold); box-shadow: 0 0 8px rgba(232,197,71,0.6); }
+.plan-dot.d-done    { background: var(--green); }
+.plan-dot.d-upcoming{ background: rgba(255,255,255,0.15); }
+.plan-info { flex: 1; }
+.plan-name { font-size: 0.83rem; font-weight: 500; margin-bottom: 2px; }
+.plan-weeks {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+}
+.plan-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.5px;
+  padding: 3px 7px;
+  border-radius: 8px;
+}
+.pb-current { background: rgba(232,197,71,0.15); color: var(--gold); }
+.pb-upcoming{ background: rgba(255,255,255,0.05); color: var(--muted); }
+.pb-done    { background: rgba(86,207,135,0.1);  color: var(--green); }
+
+/* ─────────────────────────────────────────
+   TIPS SHEET
+───────────────────────────────────────── */
+.tips-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 12px;
+}
+.tips-card h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+.tips-list { list-style: none; counter-reset: tip; }
+.tips-list li {
+  counter-increment: tip;
+  padding: 8px 0 8px 30px;
+  position: relative;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.tips-list li:last-child { border-bottom: none; }
+.tips-list li::before {
+  content: counter(tip);
+  position: absolute; left: 0; top: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--gold);
+  background: rgba(232,197,71,0.1);
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; line-height: 18px;
+}
+.tips-list b { color: var(--text); }
+
+/* ─────────────────────────────────────────
+   TOAST
+───────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: calc(60px + var(--safe-bot) + 12px);
+  left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text);
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ─────────────────────────────────────────
+   INSTALL BANNER
+───────────────────────────────────────── */
+#installBanner {
+  margin: 0 16px 12px;
+  background: linear-gradient(135deg, rgba(232,197,71,0.12), rgba(78,205,196,0.08));
+  border: 1px solid rgba(232,197,71,0.3);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+#installBanner .ib-text { flex: 1; font-size: 0.78rem; line-height: 1.4; }
+#installBanner .ib-text b { color: var(--gold); }
+#installBtn {
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: #0a0e1a;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#dismissBanner {
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+}
+</style>
+</head>
+<body>
+
+<div id="shell">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="logo-text">Clinical<span>Recall</span></div>
+    <div class="streak-pill" id="streakPill">🔥 1 day</div>
+    <div id="menuBtn" onclick="showView('tips')">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- INSTALL BANNER (shown if installable) -->
+  <div id="installBanner">
+    <div class="ib-text"><b>Install as App</b><br>Works offline, lives on your home screen</div>
+    <button id="installBtn">Install</button>
+    <span id="dismissBanner">✕</span>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- HOME VIEW -->
+    <div id="view-home" class="view active">
+      <div class="home-hero">
+        <div class="hero-day" id="heroDay">Day 1 · April 24, 2026</div>
+        <div class="hero-title">Today's<br>10 Cards</div>
+        <div class="hero-sub" id="heroSub">Subject: General Medicine · CVS</div>
+        <div class="hero-prog-label">
+          <span>Year Progress</span>
+          <span id="heroProgPct">0.3%</span>
+        </div>
+        <div class="prog-bar"><div class="prog-bar-fill" id="heroProgBar" style="width:0.3%"></div></div>
+        <div class="hero-stats">
+          <div class="stat-box">
+            <div class="stat-val" id="statDay">1</div>
+            <div class="stat-label">Day</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="statMastered">0</div>
+            <div class="stat-label">Mastered</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="statStreak">1</div>
+            <div class="stat-label">Streak</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">All Subjects</div>
+      <div class="subject-grid" id="subjectGrid"></div>
+    </div>
+
+    <!-- CARDS VIEW (dynamic) -->
+    <div id="view-cards" class="view">
+      <div class="cards-header">
+        <div class="back-btn" onclick="showView('home')">←</div>
+        <div class="cards-title" id="cardsViewTitle">CVS</div>
+        <div class="cards-count" id="cardsViewCount">10 cards</div>
+      </div>
+      <div class="card-list" id="cardList"></div>
+    </div>
+
+    <!-- PROGRESS VIEW -->
+    <div id="view-progress" class="view">
+      <div class="prog-view-title">Your Progress</div>
+      <div class="prog-view-sub">Track mastery across all subjects</div>
+      <div class="big-stats">
+        <div class="big-stat">
+          <div class="big-stat-val" style="color:var(--gold)" id="pv-mastered">0</div>
+          <div class="big-stat-lbl">Cards Mastered</div>
+        </div>
+        <div class="big-stat">
+          <div class="big-stat-val" style="color:var(--teal)" id="pv-streak">1</div>
+          <div class="big-stat-lbl">Day Streak</div>
+        </div>
+        <div class="big-stat">
+          <div class="big-stat-val" style="color:var(--green)" id="pv-reviewed">0</div>
+          <div class="big-stat-lbl">Reviewed</div>
+        </div>
+        <div class="big-stat">
+          <div class="big-stat-val" style="color:var(--purple)" id="pv-days">1</div>
+          <div class="big-stat-lbl">Day of 365</div>
+        </div>
+      </div>
+      <div class="section-label">Subject Breakdown</div>
+      <div class="subj-prog-list" id="subjProgList"></div>
+    </div>
+
+    <!-- YEAR PLAN VIEW -->
+    <div id="view-plan" class="view">
+      <div class="plan-title">365-Day Plan</div>
+      <div class="plan-sub">19 subjects · 10 cards/day · Starting April 24, 2026</div>
+      <div class="plan-list" id="planList"></div>
+    </div>
+
+    <!-- TIPS VIEW -->
+    <div id="view-tips" class="view">
+      <div class="tips-card">
+        <h3>⚡ How to Use This App</h3>
+        <ul class="tips-list">
+          <li><b>Attempt before reveal:</b> Say your answer aloud before tapping Show Answer. Effortful retrieval is the whole point — passive re-reading doesn't build memory.</li>
+          <li><b>Rate honestly:</b> Tap Again/Hard/Good/Easy. Only tap Easy if you recalled it instantly and completely. Self-deception wastes revision time.</li>
+          <li><b>10 cards = 15 min max:</b> Set a timer. Urgency sharpens focus. Don't binge. Spaced repetition beats marathon sessions every time.</li>
+          <li><b>Pearl → Patient:</b> When you read the clinical pearl, visualise a real patient from your wards. Emotional context anchors memory far better than rote repetition.</li>
+          <li><b>"Again" cards first:</b> Before starting new cards, spend 5 min revisiting yesterday's flagged cards. This is the spacing effect — your brain consolidates during sleep.</li>
+        </ul>
+      </div>
+      <div class="tips-card">
+        <h3>🎯 Exam Strategy</h3>
+        <ul class="tips-list">
+          <li><b>Triads first:</b> Examiners love asking for exact components. Nail Beck's, Virchow's, Charcot's (×2!), Whipple's, Reynold's Pentad as a priority.</li>
+          <li><b>Know the traps:</b> Two Charcot's triads (biliary vs neurological). Two Trousseau's signs (malignancy vs hypocalcaemia). These are guaranteed NEET PG questions.</li>
+          <li><b>Mechanisms over memorisation:</b> If you understand WHY Beck's triad happens, you'll never forget it — and you'll handle modified questions too.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- BOTTOM NAV -->
+  <div id="bottomnav">
+    <div class="nav-item active" id="nav-home" onclick="showView('home')">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" id="nav-cards" onclick="showView('cards')">
+      <div class="nav-icon">🃏</div>
+      <div class="nav-label">Cards</div>
+    </div>
+    <div class="nav-item" id="nav-progress" onclick="showView('progress')">
+      <div class="nav-icon">📊</div>
+      <div class="nav-label">Progress</div>
+    </div>
+    <div class="nav-item" id="nav-plan" onclick="showView('plan')">
+      <div class="nav-icon">📅</div>
+      <div class="nav-label">Year Plan</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════
+const SUBJECTS = [
+  { id:'cvs',     icon:'❤️',  name:'General Medicine',   sub:'CVS',               weeks:'Wk 1–2',  status:'current' },
+  { id:'resp',    icon:'🫁',  name:'General Medicine',   sub:'Respiratory',        weeks:'Wk 3–4',  status:'upcoming' },
+  { id:'gi',      icon:'🫀',  name:'Surgery / Medicine', sub:'GI & Hepatology',    weeks:'Wk 5–7',  status:'upcoming' },
+  { id:'neuro',   icon:'🧠',  name:'Medicine',           sub:'Neurology',          weeks:'Wk 8–10', status:'upcoming' },
+  { id:'ortho',   icon:'🦴',  name:'Orthopaedics',       sub:'Trauma & Signs',     weeks:'Wk 11–13',status:'upcoming' },
+  { id:'obgyn',   icon:'🤰',  name:'OBG',                sub:'Obstetrics & Gynae', weeks:'Wk 14–18',status:'upcoming' },
+  { id:'peds',    icon:'👶',  name:'Paediatrics',        sub:'Clinical Signs',     weeks:'Wk 19–23',status:'upcoming' },
+  { id:'ophthal', icon:'👁️', name:'Ophthalmology',      sub:'Signs & Syndromes',  weeks:'Wk 24–27',status:'upcoming' },
+];
+
+const YEAR_PLAN = [
+  { name:'General Medicine (CVS)',          weeks:'Wk 1–2',   status:'current' },
+  { name:'General Medicine (Respiratory)',  weeks:'Wk 3–4',   status:'upcoming' },
+  { name:'General Medicine (GI / Renal)',   weeks:'Wk 5–7',   status:'upcoming' },
+  { name:'General Medicine (Endo/Neuro)',   weeks:'Wk 8–10',  status:'upcoming' },
+  { name:'Surgery (GI / Hepatobiliary)',    weeks:'Wk 11–13', status:'upcoming' },
+  { name:'Surgery (Urology / Thyroid)',     weeks:'Wk 14–15', status:'upcoming' },
+  { name:'Orthopaedics',                    weeks:'Wk 16–18', status:'upcoming' },
+  { name:'Obstetrics',                      weeks:'Wk 19–22', status:'upcoming' },
+  { name:'Gynaecology',                     weeks:'Wk 23–25', status:'upcoming' },
+  { name:'Paediatrics',                     weeks:'Wk 26–29', status:'upcoming' },
+  { name:'Ophthalmology',                   weeks:'Wk 30–32', status:'upcoming' },
+  { name:'ENT',                             weeks:'Wk 33–34', status:'upcoming' },
+  { name:'Dermatology',                     weeks:'Wk 35–36', status:'upcoming' },
+  { name:'Psychiatry',                      weeks:'Wk 37–38', status:'upcoming' },
+  { name:'Pharmacology (Clinical)',         weeks:'Wk 39–41', status:'upcoming' },
+  { name:'Pathology (Clinical)',            weeks:'Wk 42–44', status:'upcoming' },
+  { name:'Microbiology (Clinical)',         weeks:'Wk 45–46', status:'upcoming' },
+  { name:'Community Medicine / PSM',        weeks:'Wk 47–49', status:'upcoming' },
+  { name:'Radiology / Investigations',      weeks:'Wk 50–52', status:'upcoming' },
+];
+
+const CARDS = {
+cvs:[
+  { title:"Beck's Triad", type:"triad", prompt:"List the 3 components + associated condition.",
+    components:["<b>Hypotension</b> (↓ BP / low cardiac output)","<b>Muffled / distant heart sounds</b>","<b>Raised JVP</b> (distended neck veins)"],
+    conditions:["Cardiac Tamponade"],
+    patho:"Pericardial fluid compresses the heart → ↓ cardiac filling → ↓ output (hypotension) + muffled sounds. Backup pressure raises JVP.",
+    pearl:"🎯 Only present in ~33% of tamponade. <em>Pulsus paradoxus</em> (>10 mmHg fall in SBP on inspiration) is more sensitive. Surgical emergency → pericardiocentesis." },
+
+  { title:"Virchow's Triad", type:"triad", prompt:"List all 3 factors predisposing to thrombosis.",
+    components:["<b>Stasis</b> of blood flow","<b>Endothelial injury</b>","<b>Hypercoagulability</b>"],
+    conditions:["DVT","PE","Any thrombosis"],
+    patho:"Any disruption to normal laminar flow, vessel wall integrity, or coagulation balance tips the system toward pathological clot formation.",
+    pearl:"🎯 Mnemonic: <em>SEH</em> — Stasis, Endothelial, Hypercoag. All 3 together = highest risk (e.g., post-op bedridden patient with malignancy)." },
+
+  { title:"Corrigan's Pulse", type:"sign", prompt:"Describe the pulse character and associated condition.",
+    components:["<b>Abrupt forceful upstroke</b>","<b>Rapid collapse</b> (water-hammer quality)","Best felt with wrist elevated above heart level"],
+    conditions:["Aortic Regurgitation (AR)"],
+    patho:"In AR, blood regurgitates into LV during diastole → very low diastolic pressure + high systolic stroke volume → wide pulse pressure → bounding collapsing pulse.",
+    pearl:"🎯 Other AR signs: <em>De Musset's</em> (head nodding), <em>Quincke's</em> (nail bed pulsation), <em>Duroziez's</em> (femoral bruit). All due to wide pulse pressure." },
+
+  { title:"Osler's Nodes vs Janeway Lesions", type:"sign", prompt:"Differentiate in Infective Endocarditis.",
+    components:["<b>Osler's nodes:</b> Painful, tender, finger/toe pads — immunological (immune complex)","<b>Janeway lesions:</b> Painless, palms/soles, flat erythematous — embolic / septic"],
+    conditions:["Infective Endocarditis"],
+    patho:"Osler = immune complex deposition → inflammation → PAIN. Janeway = septic microemboli → haemorrhagic infarcts → painless.",
+    pearl:"🎯 Memory: <em>Osler = Ouch (painful); Janeway = Just there (painless).</em> Both are minor Duke criteria for IE diagnosis." },
+
+  { title:"Kussmaul's Sign", type:"sign", prompt:"Define this sign and list conditions associated.",
+    components:["<b>Paradoxical RISE in JVP on inspiration</b>","Opposite to normal (JVP normally falls on inspiration)"],
+    conditions:["Constrictive Pericarditis","Cardiac Tamponade","RV Infarction","Restrictive Cardiomyopathy"],
+    patho:"Normally inspiration → ↓ intrathoracic pressure → blood pools in lungs → JVP falls. Rigid pericardium prevents RV expansion → blood backs up → JVP rises.",
+    pearl:"🎯 More specific for <em>constrictive pericarditis</em> than tamponade. Combine with pericardial knock + pulsus paradoxus for full picture." },
+
+  { title:"Dressler's Syndrome Triad", type:"triad", prompt:"What is the triad and when does it occur?",
+    components:["<b>Fever</b>","<b>Pleuritic chest pain</b>","<b>Pericarditis</b> (pericardial rub)"],
+    conditions:["Post-MI Pericarditis (Dressler's Syndrome)","Post-cardiac surgery"],
+    patho:"Autoimmune reaction to released myocardial antigens 2–10 weeks post-MI → antibodies attack pericardium and pleura.",
+    pearl:"🎯 Timing: Weeks 2–10 post-MI. Treat with NSAIDs + colchicine. Don't confuse with early pericarditis (day 1–3, direct epicardial inflammation)." },
+
+  { title:"Carey Coombs Murmur", type:"sign", prompt:"Describe murmur, mechanism, condition.",
+    components:["<b>Mid-diastolic</b> murmur at <b>apex</b>","Short, low-pitched, rumbling","NO opening snap","Disappears with treatment"],
+    conditions:["Acute Rheumatic Fever (active mitral valvulitis)"],
+    patho:"Active mitral valvulitis → leaflet oedema/thickening → relative mitral stenosis during diastole → turbulent flow → rumbling murmur.",
+    pearl:"🎯 Distinguish from MS: Carey Coombs has NO opening snap and resolves with treatment. MS has loud S1 + opening snap + doesn't resolve." },
+
+  { title:"Ewart's Sign", type:"sign", prompt:"Describe Ewart's sign and condition.",
+    components:["<b>Dullness to percussion</b>","<b>Bronchial breathing</b>","<b>Increased vocal resonance</b>","All at <b>left lower scapular angle</b>"],
+    conditions:["Large Pericardial Effusion"],
+    patho:"Massive pericardial fluid compresses left lower lobe → collapse/consolidation at that segment → signs of consolidation at left base posteriorly.",
+    pearl:"🎯 Ewart's is the ONLY sign of pericardial effusion that mimics consolidation. Always do Echo to confirm. Don't treat as pneumonia." },
+
+  { title:"Pemberton's Sign", type:"sign", prompt:"Describe the test and condition.",
+    components:["Patient raises both arms above head for 1 minute","Positive: <b>Facial flushing, cyanosis, distress</b>","Sometimes syncope or stridor"],
+    conditions:["Retrosternal Goitre","Mediastinal Mass compressing SVC"],
+    patho:"Raising arms narrows thoracic inlet → further SVC compression → venous congestion in head/neck → flushing, cyanosis, raised JVP.",
+    pearl:"🎯 Positive Pemberton's = SVC compression. Also present in SVC syndrome. Do chest X-ray/CT for retrosternal goitre or mediastinal mass." },
+
+  { title:"Reynold's Pentad", type:"pentad", prompt:"List all 5 components — upgrade from Charcot's.",
+    components:["<b>Fever with rigors</b>","<b>Right upper quadrant pain</b>","<b>Jaundice</b>","<b>Hypotension</b>","<b>Altered consciousness / confusion</b>"],
+    conditions:["Severe Septic Cholangitis","Emergency biliary decompression required"],
+    patho:"Ascending cholangitis (Charcot's triad) with septicaemic shock → sepsis → hypotension + encephalopathy = Reynold's Pentad. Life-threatening.",
+    pearl:"🎯 Charcot's triad (3) + hypotension + confusion = Reynold's pentad (5). NEET loves this upgrade. Emergency ERCP or percutaneous drainage immediately." },
+],
+
+resp:[
+  { title:"Samter's Triad", type:"triad", prompt:"Name the 3 components.",
+    components:["<b>Aspirin sensitivity</b>","<b>Asthma</b>","<b>Nasal polyps</b>"],
+    conditions:["Aspirin-Exacerbated Respiratory Disease (AERD)"],
+    patho:"Aspirin inhibits COX-1 → arachidonic acid shunted to lipooxygenase → excess leukotrienes → bronchoconstriction + mucosal inflammation + polyp growth.",
+    pearl:"🎯 Avoid ALL NSAIDs. Montelukast (leukotriene blocker) is key adjunct. Aspirin desensitisation possible in selected patients." },
+
+  { title:"Horner's Syndrome Triad", type:"triad", prompt:"List 3 classic features and 4 causes.",
+    components:["<b>Ptosis</b> (partial — sympathetic, not complete)","<b>Miosis</b> (constricted pupil)","<b>Anhidrosis</b> (absent sweating on face)","(+ Enophthalmos — 4th sign)"],
+    conditions:["Pancoast Tumour","Carotid Dissection","Lateral Medullary Syndrome","Syringomyelia"],
+    patho:"Interruption of sympathetic chain (hypothalamus → superior cervical ganglion) removes sympathetic tone to eye and face.",
+    pearl:"🎯 Pancoast causes Horner's + brachial plexus pain + apical lung mass. Always a red flag triad." },
+
+  { title:"Mendelson's Syndrome", type:"cluster", prompt:"What is it, when, and signs?",
+    components:["<b>Aspiration of gastric contents</b>","<b>Chemical pneumonitis</b>","Acute: <b>tachycardia, tachypnoea, cyanosis</b>","Bilateral basal infiltrates on CXR"],
+    conditions:["Aspiration Pneumonitis","ARDS"],
+    patho:"Gastric acid (pH <2.5) directly damages alveolar-capillary membrane → inflammatory response → diffuse alveolar damage → acute hypoxic failure.",
+    pearl:"🎯 Occurs in unconscious/GA patients. Right lower lobe most common (most vertical bronchus). Prevention > treatment." },
+
+  { title:"Löfgren's Syndrome", type:"triad", prompt:"Name the 3 features and condition.",
+    components:["<b>Bilateral hilar lymphadenopathy</b>","<b>Erythema nodosum</b>","<b>Ankle periarthritis</b> (migratory polyarthritis)"],
+    conditions:["Acute Sarcoidosis (good prognosis subtype)"],
+    patho:"Type 4 hypersensitivity → granuloma formation in lungs (BHL) + skin (EN). Immune complex deposition around ankles → periarthritis.",
+    pearl:"🎯 Löfgren's = GOOD prognosis, usually self-limiting. Treat with NSAIDs. More common in Scandinavian/Irish women." },
+
+  { title:"Cheyne-Stokes Respiration", type:"cluster", prompt:"Describe pattern and causes.",
+    components:["<b>Crescendo-decrescendo breathing</b>","Followed by <b>apnoea</b>","Cyclical, repeating every 30–120 seconds"],
+    conditions:["Heart Failure","Raised ICP","Uraemia"],
+    patho:"In HF, delayed circulation time → CO₂ builds up → hyperpnoeic response → overshoots → CO₂ drops → apnoea → cycle repeats.",
+    pearl:"🎯 Kussmaul = deep, regular, no apnoea = metabolic acidosis (DKA). Biot's = irregular with sudden apnoea = severe brainstem injury." },
+
+  { title:"Hamman's Sign", type:"sign", prompt:"Describe sign and its causes.",
+    components:["<b>Crunching/crackling sounds</b> heard with heartbeat","Best in <b>left lateral decubitus</b>","Synchronous with cardiac cycle"],
+    conditions:["Pneumomediastinum","Boerhaave's Syndrome","Post-ERCP perforation"],
+    patho:"Air in mediastinum moves with each heartbeat → crackling sounds as it rubs against mediastinal structures.",
+    pearl:"🎯 Boerhaave's = spontaneous oesophageal rupture after forceful vomiting. Mackler's triad: vomiting + chest pain + subcutaneous emphysema. Surgical emergency." },
+
+  { title:"Trousseau's Sign of Malignancy", type:"sign", prompt:"Describe and distinguish from Trousseau's of hypocalcaemia.",
+    components:["<b>Migratory thrombophlebitis</b>","Superficial veins of arms/legs","Spontaneously appearing and disappearing clots"],
+    conditions:["Pancreatic carcinoma (classic)","Gastric cancer","Any visceral malignancy"],
+    patho:"Cancer cells release mucin and tissue factor → chronic coagulation activation → hypercoagulability → migratory thrombophlebitis.",
+    pearl:"🎯 TWO Trousseau signs! (1) Malignancy = migratory thrombophlebitis. (2) Hypocalcaemia = carpal spasm after BP cuff inflation. NEET favourite distinction!" },
+
+  { title:"Yellow Nail Syndrome Triad", type:"triad", prompt:"List triad and associations.",
+    components:["<b>Yellow, thickened, slow-growing nails</b>","<b>Lymphoedema</b>","<b>Pleural effusion</b> / chronic respiratory disease"],
+    conditions:["Primary lymphatic aplasia","Associated with malignancy, TB, AIDS"],
+    patho:"Abnormal lymphatic drainage → impaired lung drainage → pleural effusion + peripheral oedema + poor nail growth.",
+    pearl:"🎯 Rare but NEET favourite! Other nail findings: Clubbing (hypoxia), Splinter haemorrhages (IE), Leukonychia (hypoalbuminaemia), Koilonychia (IDA)." },
+
+  { title:"Waterhouse-Friderichsen Syndrome", type:"cluster", prompt:"Describe condition, cause, and presentation.",
+    components:["<b>Bilateral adrenal haemorrhage</b>","<b>Purpuric/petechial non-blanching rash</b>","<b>Septicaemia</b>","Rapid cardiovascular collapse"],
+    conditions:["Meningococcal septicaemia (N. meningitidis)"],
+    patho:"Meningococcal endotoxin → DIC → haemorrhage into adrenal glands → acute adrenal crisis + overwhelming sepsis → rapid collapse.",
+    pearl:"🎯 Non-blanching rash (tumbler test) in sick child = emergency. Give IM benzylpenicillin BEFORE hospital transfer." },
+
+  { title:"SVC Obstruction Syndrome", type:"cluster", prompt:"List features of SVC syndrome.",
+    components:["<b>Facial oedema + plethora</b>","<b>Distended non-pulsatile neck veins</b>","<b>Dilated collateral veins</b> on chest wall","Headache, blurred vision","Oedema of arms"],
+    conditions:["Lung cancer (SCLC most common)","Lymphoma","Thrombus"],
+    patho:"SVC obstruction → venous hypertension above obstruction → oedema/congestion of head, neck, upper limbs. Collaterals open to bypass obstruction.",
+    pearl:"🎯 Pemberton's sign positive. Diagnosis: CT chest with contrast. Urgent: steroids + radiotherapy + stent." },
+],
+
+gi:[
+  { title:"Charcot's Biliary Triad", type:"triad", prompt:"Name components and condition (NOT neurological Charcot's).",
+    components:["<b>Fever with rigors</b>","<b>Right upper quadrant pain</b>","<b>Jaundice</b>"],
+    conditions:["Ascending Cholangitis"],
+    patho:"Biliary obstruction → bile stasis → bacterial overgrowth → ascending infection → fever + biliary pain + obstructive jaundice.",
+    pearl:"🎯 + Hypotension + Confusion = Reynold's Pentad (upgrade to severe septic cholangitis). Emergency ERCP needed." },
+
+  { title:"Cullen's Sign vs Grey Turner's Sign", type:"sign", prompt:"Location and condition for each.",
+    components:["<b>Cullen's:</b> Periumbilical bruising (bluish)","<b>Grey Turner's:</b> Flank bruising (bluish-green)"],
+    conditions:["Acute Haemorrhagic Pancreatitis","Ruptured Ectopic Pregnancy"],
+    patho:"Retroperitoneal haemorrhage → blood tracks along fascial planes → periumbilical (Cullen's) or flank (Grey Turner's). Takes 24–48h.",
+    pearl:"🎯 Mnemonic: <em>Grey Turner = Flanks (GT = Go Toward flanks); Cullen = Centre (umbelical)</em>. Both = haemorrhagic pancreatitis, very poor prognosis." },
+
+  { title:"Murphy's Sign", type:"sign", prompt:"How elicited and what does it indicate?",
+    components:["Deep palpation in <b>right subcostal area</b>","Patient asked to <b>breathe in deeply</b>","<b>Inspiratory arrest</b> due to pain = positive"],
+    conditions:["Acute Cholecystitis"],
+    patho:"Inflamed gallbladder descends on inspiration → contacts examiner's fingers → pain → patient involuntarily stops breathing in.",
+    pearl:"🎯 Sonographic Murphy's more sensitive. Negative Murphy's + stones = biliary colic only. Cholecystitis = fever + raised WCC + positive Murphy's." },
+
+  { title:"Whipple's Triad", type:"triad", prompt:"List 3 components.",
+    components:["<b>Symptoms of hypoglycaemia</b> during fasting/exercise","<b>Blood glucose < 2.2 mmol/L</b> during attack","<b>Relief of symptoms</b> with glucose administration"],
+    conditions:["Insulinoma"],
+    patho:"Pancreatic beta-cell tumour autonomously secretes insulin despite low glucose → symptomatic hypoglycaemia → relief with glucose confirms causation.",
+    pearl:"🎯 Next step after Whipple's triad: 72-hour fast test + insulin/C-peptide levels. Insulinoma usually benign. Surgery curative." },
+
+  { title:"Courvoisier's Law", type:"sign", prompt:"State the law and explain exception.",
+    components:["<b>Painless jaundice</b> + <b>palpable non-tender gallbladder</b>","= NOT due to gallstones","= suspect <b>carcinoma of head of pancreas</b>"],
+    conditions:["Carcinoma of Head of Pancreas","Ampullary Carcinoma","Cholangiocarcinoma"],
+    patho:"Gallstone obstruction → GB chronically fibrotic → can't distend. Malignant obstruction (no prior inflammation) → GB distends freely → palpable.",
+    pearl:"🎯 Courvoisier's is a LAW not a sign. Exception: prior cholangitis + malignancy = GB may not be palpable. CA-125 can be falsely elevated." },
+
+  { title:"Troisier's Sign & Sister Mary Joseph", type:"sign", prompt:"Describe and significance of each.",
+    components:["<b>Troisier's sign:</b> Hard node in <b>left supraclavicular fossa</b> (Virchow's node)","<b>Sister Mary Joseph nodule:</b> Hard umbilical nodule"],
+    conditions:["Intra-abdominal malignancy (gastric, colorectal, ovarian, pancreatic)"],
+    patho:"Lymphatic drainage → thoracic duct → left subclavian vein → Virchow's node. Umbilical nodule = direct peritoneal spread via umbilical remnant vessels.",
+    pearl:"🎯 Both = advanced/metastatic intra-abdominal cancer. Troisier's = gastric cancer most commonly. Hard umbilical mass in adult = Sister Mary Joseph until proven otherwise." },
+
+  { title:"Intussusception Triad", type:"triad", prompt:"Classic triad in children.",
+    components:["<b>Colicky abdominal pain</b> (intermittent, inconsolable crying)","<b>Vomiting</b>","<b>Red currant jelly stools</b> (blood + mucus)"],
+    conditions:["Intussusception (ileocaecal)","Peak age: 3 months – 3 years"],
+    patho:"Telescoping of bowel → venous congestion → mucosal ischaemia → sloughing → blood + mucus. Sausage-shaped mass palpable in RIF.",
+    pearl:"🎯 Ultrasound: target sign / donut sign. Air enema reduction >90% success. Lead point in older children (Meckel's, polyp) → surgery." },
+
+  { title:"Mirizzi Syndrome", type:"cluster", prompt:"Define and clinical features.",
+    components:["<b>Gallstone impacted in Hartmann's pouch or cystic duct</b>","<b>External compression of common hepatic duct</b>","Features: jaundice, RUQ pain, fever"],
+    conditions:["Mirizzi Syndrome — complication of gallstones"],
+    patho:"Large stone in cystic duct exerts external pressure on adjacent CHD → biliary obstruction → jaundice. May form cholecystocholedochal fistula (Type II+).",
+    pearl:"🎯 MRCP for staging. High surgical risk — specialist hepatobiliary team. Operative cholangiogram essential." },
+
+  { title:"Psoas Sign & Obturator Sign", type:"sign", prompt:"Describe both and conditions.",
+    components:["<b>Psoas sign:</b> Pain on extending right hip → retrocaecal appendix irritates psoas","<b>Obturator sign:</b> Pain on internal rotation of flexed right hip → pelvic appendix irritates obturator internus"],
+    conditions:["Appendicitis (various positions)","Psoas abscess"],
+    patho:"Inflamed appendix or abscess lies near psoas/obturator muscles → specific movement stretches these muscles → pain.",
+    pearl:"🎯 Both help localise appendix position. Rovsing's sign = LIF pressure → RIF pain. Dunphy's = cough → pain (peritoneal irritation)." },
+
+  { title:"Pyloric Stenosis — Classic Features", type:"cluster", prompt:"List clinical features.",
+    components:["Male infant, <b>3–6 weeks</b> of age","<b>Projectile non-bilious vomiting</b> after feeds","<b>Hungry after vomiting</b>","Palpable <b>olive mass</b> in RUQ","Metabolic: <b>hypochloraemic hypokalaemic alkalosis</b>"],
+    conditions:["Hypertrophic Pyloric Stenosis"],
+    patho:"Pyloric muscle hypertrophy → gastric outlet obstruction → projectile vomiting of acid → hypochloraemia + alkalosis. Kidneys conserve Na⁺ → lose H⁺/K⁺ → worsens alkalosis.",
+    pearl:"🎯 String sign on barium meal; target sign on USS. Correct electrolytes FIRST, then Ramstedt's pyloromyotomy." },
+],
+
+neuro:[
+  { title:"Brudzinski's Sign", type:"sign", prompt:"How elicited and what does it indicate?",
+    components:["Passive <b>flexion of neck</b> by examiner","→ Involuntary <b>flexion of hips and knees</b>"],
+    conditions:["Meningitis","Subarachnoid Haemorrhage"],
+    patho:"Inflamed meninges → neck flexion stretches meninges/cord → reflex hip/knee flexion to reduce stretch pain.",
+    pearl:"🎯 Kernig's: hip flexed 90° → can't extend knee. Both test meningeal irritation. Sensitivity ~50%, specificity high. Combine with fever + photophobia." },
+
+  { title:"Chvostek's Sign", type:"sign", prompt:"How elicited and condition?",
+    components:["Tapping <b>facial nerve</b> just anterior to ear","→ Twitching of <b>facial muscles</b>"],
+    conditions:["Hypocalcaemia","Hypomagnesaemia"],
+    patho:"↓ Ca²⁺ → ↓ threshold for nerve depolarisation → peripheral nerves hyperexcitable → mechanical stimulus triggers repetitive firing → twitching.",
+    pearl:"🎯 Present in 10% of normal people (false positive). Trousseau's sign (carpal spasm after BP cuff inflation) is more specific. Check Ca²⁺, Mg²⁺, PTH, Vit D." },
+
+  { title:"Charcot's Neurological Triad", type:"triad", prompt:"Name the neurological Charcot's triad (NOT biliary).",
+    components:["<b>Nystagmus</b>","<b>Intention tremor</b>","<b>Scanning / staccato speech</b>"],
+    conditions:["Multiple Sclerosis","Cerebellar lesions"],
+    patho:"Demyelination of cerebellar pathways → ataxia (tremor), pendular eye movements (nystagmus), dyscoordination of speech (scanning speech).",
+    pearl:"🎯 TWO Charcot's triads! Biliary = fever + jaundice + RUQ pain. Neurological = nystagmus + intention tremor + scanning speech. NEET classic." },
+
+  { title:"Argyll Robertson Pupil", type:"sign", prompt:"Describe pupil findings and condition.",
+    components:["<b>Accommodation reflex INTACT</b> (near → pupil constricts)","<b>Light reflex ABSENT</b> (no constriction to bright light)","Bilateral, irregular, small pupils"],
+    conditions:["Neurosyphilis (Tabes Dorsalis)","Diabetic autonomic neuropathy"],
+    patho:"Dorsal midbrain lesion → pretectal area damaged → light reflex arc interrupted. Accommodation arc (via EW nucleus) spared.",
+    pearl:"🎯 Memory: <em>'Prostitute pupil — accommodates but doesn't react (to light)'</em>. Reverse = Adie's pupil (reacts slowly to light, accommodation lost)." },
+
+  { title:"Tinel's Sign vs Phalen's Sign", type:"sign", prompt:"Describe both signs, distinguish them.",
+    components:["<b>Tinel's:</b> Tapping over carpal tunnel at wrist → tingling in median nerve distribution","<b>Phalen's:</b> Wrist flexion for 60 sec → tingling/numbness in median nerve territory"],
+    conditions:["Carpal Tunnel Syndrome"],
+    patho:"Median nerve compressed at carpal tunnel → mechanical stimulation (Tinel's) or increased pressure via flexion (Phalen's) → paraesthesia.",
+    pearl:"🎯 Tinel's = tap → tingle; Phalen's = flex → feel. Phalen's more sensitive (~70%). Night-time tingling + thenar wasting = advanced CTS." },
+
+  { title:"Wallenberg Syndrome", type:"cluster", prompt:"List ipsilateral AND contralateral features.",
+    components:["<b>Ipsilateral:</b> Facial pain/numbness (V), Horner's, dysphagia, hoarseness (IX/X), ataxia","<b>Contralateral:</b> Loss of pain & temp in limbs/body (spinothalamic)"],
+    conditions:["Lateral Medullary Syndrome","PICA or vertebral artery infarction"],
+    patho:"PICA infarct → lateral medulla → multiple CN nuclei + spinothalamic tract + sympathetic chain + cerebellar peduncle affected simultaneously.",
+    pearl:"🎯 Key: <em>Crossed sensory loss</em> — ipsilateral face, contralateral body. No motor deficit. Sudden vertigo + hiccups in young adult → think Wallenberg." },
+
+  { title:"Weber's vs Benedikt's Syndrome", type:"cluster", prompt:"Differentiate these two midbrain syndromes.",
+    components:["<b>Weber's:</b> CN III palsy ipsilateral + contralateral hemiplegia (basis pedunculi)","<b>Benedikt's:</b> CN III palsy ipsilateral + contralateral involuntary tremor (red nucleus, tegmentum)"],
+    conditions:["Paramedian Midbrain Infarction"],
+    patho:"Weber = basis pedunculi (corticospinal tract). Benedikt = tegmentum (red nucleus). Both involve CN III nucleus → ipsilateral III palsy.",
+    pearl:"🎯 Claude's syndrome = III + contralateral cerebellar signs. All brainstem syndromes: ipsilateral CN + contralateral motor/sensory = crossed paralysis rule." },
+
+  { title:"Lhermitte's Sign", type:"sign", prompt:"Describe the sign and causes.",
+    components:["Passive <b>neck flexion</b>","→ <b>Electric shock sensation</b> radiating down spine into limbs"],
+    conditions:["Multiple Sclerosis","Cervical cord compression","B12 deficiency (SACD)","Radiation myelopathy"],
+    patho:"Demyelinated/damaged dorsal columns in cervical cord → neck flexion stretches/compresses → abnormal conduction → electric shock sensation.",
+    pearl:"🎯 Classic early symptom of MS. Also positive in cervical spondylosis. Check B12, MRI cervical spine. Uhthoff's = MS symptoms worsen with heat." },
+
+  { title:"Trotter's Triad", type:"triad", prompt:"List Trotter's triad and tumour.",
+    components:["<b>Unilateral conductive deafness</b>","<b>Immobility of soft palate</b> on affected side","<b>Trigeminal neuralgia</b> (V3 — jaw pain)"],
+    conditions:["Carcinoma of Nasopharynx"],
+    patho:"Nasopharyngeal tumour → blocks Eustachian tube (deafness) + infiltrates soft palate muscles + invades foramen ovale → V3 pain.",
+    pearl:"🎯 EBV association. Classic in young Southeast/South Asian males. Presents late. FNAC of neck node for diagnosis." },
+
+  { title:"Millard-Gubler Syndrome", type:"cluster", prompt:"Features and lesion location.",
+    components:["<b>Ipsilateral VI (Abducens) palsy</b>","<b>Ipsilateral VII (Facial) LMN palsy</b>","<b>Contralateral hemiplegia</b>"],
+    conditions:["Pontine (Basis Pontis) Infarction"],
+    patho:"Paramedian pontine infarct damages CN VI & VII fascicles (ipsilateral LMN palsy) + corticospinal tract before decussation → contralateral hemiplegia.",
+    pearl:"🎯 Foville's = similar + PPRF involvement → ipsilateral gaze palsy. All brainstem: ipsilateral CN + contralateral motor = crossed paralysis." },
+],
+
+ortho:[
+  { title:"Compartment Syndrome — 6 P's", type:"cluster", prompt:"List all 6 P's.",
+    components:["<b>Pain</b> (out of proportion, on passive stretch)","<b>Pressure</b> (tense compartment)","<b>Paralysis</b>","<b>Paraesthesia</b>","<b>Pallor</b>","<b>Pulselessness</b> (late sign)"],
+    conditions:["Acute Compartment Syndrome","Tibia fracture most common"],
+    patho:"Bleeding/oedema in closed fascial compartment → ↑ intracompartmental pressure → venous obstruction → ischaemia → nerve/muscle infarction.",
+    pearl:"🎯 Pain on passive stretch = EARLIEST and most reliable sign. Pulselessness is LATE. Pressure >30 mmHg or within 30 of diastolic → emergency fasciotomy." },
+
+  { title:"Volkmann's Ischaemic Contracture", type:"cluster", prompt:"Features, cause, and classic deformity.",
+    components:["<b>Flexion contracture</b> of wrist and fingers","<b>Pronated forearm</b>","Clawed hand","Follows supracondylar fracture in children"],
+    conditions:["Compartment syndrome of forearm (untreated)"],
+    patho:"Untreated compartment syndrome → forearm muscles undergo ischaemic fibrosis → shortened fibrotic muscles pull wrist/fingers into flexion.",
+    pearl:"🎯 Volkmann's test: extending fingers is easier with wrist flexed. Treatment: mild = physio; severe = Seddon's muscle slide / tendon lengthening." },
+
+  { title:"Trendelenburg Sign", type:"sign", prompt:"Describe test and causes.",
+    components:["Patient stands on one leg","<b>Pelvis drops on opposite (unsupported) side</b> = positive","Trendelenburg gait: trunk lurches OVER affected hip to compensate"],
+    conditions:["Superior gluteal nerve palsy","CDH (Congenital Dislocation of Hip)","Coxa vara","Old polio"],
+    patho:"Gluteus medius (hip abductor) too weak to hold pelvis level → contralateral pelvis drops when ipsilateral foot lifted.",
+    pearl:"🎯 Positive on the WEAK side. Bilateral DDH → waddling gait. Unilateral hip pathology → Trendelenburg lurch." },
+
+  { title:"Thomas Test", type:"sign", prompt:"Describe test and what it detects.",
+    components:["Patient supine, <b>opposite hip fully flexed</b> to flatten lumbar lordosis","<b>Tested leg rises off table</b> = fixed flexion deformity (FFD)","Angle of rise = degree of FFD"],
+    conditions:["Fixed Flexion Deformity of Hip","OA of Hip","Hip TB"],
+    patho:"Tight hip flexors (iliopsoas) prevent full extension. When lordosis eliminated, true deformity is unmasked.",
+    pearl:"🎯 OA hip = FFD + ↓ internal rotation (first movement lost in OA). Hip TB: spasm → flexion → fibrous ankylosis." },
+
+  { title:"McMurray's Test", type:"sign", prompt:"Describe and structure tested.",
+    components:["Knee fully flexed","External rotation + extension → <b>click/pain = medial meniscus</b>","Internal rotation + extension → <b>click/pain = lateral meniscus</b>"],
+    conditions:["Meniscal Tears"],
+    patho:"Torn meniscal fragment trapped between tibia and femur during rotation → click/snap/pain as knee extends.",
+    pearl:"🎯 Apley grind test: compression in prone = meniscal; distraction = ligament. Thessaly test (standing rotation) is more sensitive." },
+
+  { title:"Froment's Sign", type:"sign", prompt:"Describe sign and nerve involved.",
+    components:["Hold paper between thumb and index finger","<b>Patient flexes thumb IP joint (FPL)</b> instead of adducting (adductor pollicis)","= Adductor pollicis weakness"],
+    conditions:["Ulnar Nerve Palsy"],
+    patho:"Adductor pollicis (ulnar nerve) paralysed → patient compensates with FPL (median nerve) → IP joint flexion to grip paper.",
+    pearl:"🎯 Ulnar claw: 4th and 5th fingers. Wrist = worse claw (FDP intact). Elbow = less claw (FDP also paralysed). Wartenberg's = little finger abduction." },
+
+  { title:"Finkelstein's Test", type:"sign", prompt:"Describe test and condition.",
+    components:["Patient fist with thumb inside fingers","<b>Ulnar deviation of wrist</b>","→ <b>Sharp pain over radial styloid</b>"],
+    conditions:["De Quervain's Tenosynovitis","APL + EPB tendon inflammation"],
+    patho:"Stenosing tenosynovitis of 1st dorsal compartment → inflammation → passive stretching by ulnar deviation causes sharp pain.",
+    pearl:"🎯 Common in new mothers. Rest + splint + steroid injection. Positive Finkelstein = De Quervain's, not thumb OA." },
+
+  { title:"Brodie's Abscess", type:"cluster", prompt:"Describe Brodie's abscess features.",
+    components:["<b>Subacute/chronic osteomyelitis</b>","Walled-off abscess cavity in <b>metaphysis</b>","Surrounded by <b>sclerotic bone</b>","Low-grade fever, local pain, no systemic toxicity","X-ray: lucent area with dense sclerotic rim"],
+    conditions:["Chronic Haematogenous Osteomyelitis","Staph aureus most common"],
+    patho:"Host partially controls infection → pus localised → sclerotic wall forms → Brodie's abscess. No frank sepsis but chronic local pain.",
+    pearl:"🎯 Sequestrum = dead bone. Involucrum = new bone around dead bone. Cloaca = opening in involucrum. Sinus = tract to skin. These 4 terms = exam marks." },
+
+  { title:"Lachman's Test vs Anterior Drawer", type:"sign", prompt:"Describe both and what they detect.",
+    components:["<b>Lachman's:</b> Knee at 20° flexion → anterior tibial translation — more sensitive (90%)","<b>Anterior Draw:</b> Knee at 90° flexion → tibia pulled forward — less sensitive (60%)"],
+    conditions:["ACL (Anterior Cruciate Ligament) Tear"],
+    patho:"ACL prevents anterior translation of tibia on femur. When torn, tibia moves forward excessively.",
+    pearl:"🎯 Pivot shift = gold standard for ACL. Posterior sag sign + posterior draw = PCL injury. PCL = most commonly injured in dashboard injuries." },
+
+  { title:"Perthes vs SUFE", type:"cluster", prompt:"Compare clinically.",
+    components:["<b>Perthes:</b> Age 4–8, boys, AVN femoral head, limp + ↓ abduction/IR, X-ray: flattened epiphysis","<b>SUFE:</b> Obese adolescent 10–16, hip/knee pain, 'ice cream off cone' X-ray, treat with screw in situ"],
+    conditions:["Legg-Calvé-Perthes Disease","Slipped Upper Femoral Epiphysis (SUFE)"],
+    patho:"Perthes = idiopathic AVN. SUFE = obesity + hormonal changes → physeal weakness → capital epiphysis slips posteroinferiorly.",
+    pearl:"🎯 Both: limp in a child. Hip pathology often refers pain to KNEE (obturator nerve L3 shared). ALWAYS X-ray hip when child complains of knee pain." },
+],
+
+obgyn:[
+  { title:"HELLP Syndrome", type:"cluster", prompt:"Expand HELLP and list diagnostic criteria.",
+    components:["<b>H</b>aemolysis","<b>E</b>levated <b>L</b>iver enzymes","<b>L</b>ow <b>P</b>latelets (<100 × 10⁹/L)"],
+    conditions:["Severe Pre-eclampsia / Eclampsia complication"],
+    patho:"Endothelial dysfunction → microangiopathic haemolysis → liver ischaemia (↑ enzymes) → platelet consumption → thrombocytopaenia.",
+    pearl:"🎯 May present WITHOUT hypertension/proteinuria. Risk: DIC, placental abruption, liver rupture. Delivery = definitive treatment." },
+
+  { title:"Bishop's Score", type:"cluster", prompt:"List all 5 components and interpretation.",
+    components:["<b>Dilation</b> (0–3)","<b>Effacement</b> (0–3)","<b>Station</b> (0–3)","<b>Consistency</b> (0–2)","<b>Position</b> (0–2) → Total 0–13"],
+    conditions:["Cervical ripeness assessment for induction of labour"],
+    patho:"Each component reflects cervical changes as labour approaches. Total reflects favourability.",
+    pearl:"🎯 Score ≥8 = favourable, proceed to induction. Score <6 = ripen first (PGE₂ gel, Foley). MBBS favourite — memorise 5 components." },
+
+  { title:"Spalding's Sign", type:"sign", prompt:"Describe on X-ray and significance.",
+    components:["<b>Overlapping/telescoping of fetal skull bones</b>","On plain X-ray","Brain liquefaction removes structural support → calvarium collapses"],
+    conditions:["Intrauterine Fetal Death (IUFD)"],
+    patho:"After fetal death, brain undergoes autolysis → no support for skull bones → overlapping calvarial bones on X-ray.",
+    pearl:"🎯 Earliest X-ray sign: Robert's sign (gas in fetal vessels). Spalding's = later (>48 hrs). USG is investigation of choice — absent cardiac activity." },
+
+  { title:"Signs of Early Pregnancy", type:"cluster", prompt:"Name 4 early pregnancy signs (probable).",
+    components:["<b>Chadwick's / Jacquemier's:</b> Blue discolouration of vagina/cervix","<b>Hegar's sign:</b> Softening of uterine isthmus","<b>Goodell's sign:</b> Cervical softening","<b>Palmer's sign:</b> Rhythmic uterine contractions on bimanual"],
+    conditions:["Early Pregnancy (6–8 weeks)"],
+    patho:"Oestrogen → ↑ vascularity + venous engorgement → cyanosis of vaginal mucosa. Progesterone → myometrial relaxation.",
+    pearl:"🎯 All are PROBABLE signs of pregnancy. Only positive pregnancy test + USG = positive signs. MBBS loves asking probable vs positive vs presumptive signs." },
+
+  { title:"McDonald's Rule", type:"cluster", prompt:"State the rule for symphysio-fundal height.",
+    components:["<b>Fundal height (cm) ≈ Gestational age (weeks)</b>","Measured from pubic symphysis to fundus","Valid from 20–36 weeks of gestation"],
+    conditions:["Normal pregnancy monitoring"],
+    patho:"Uterus grows ~1 cm/week between 20–36 weeks.",
+    pearl:"🎯 >2 cm above = Large for dates (twins, polyhydramnios, macrosomia). >2 cm below = Small for dates (IUGR, oligohydramnios). Always plot on growth chart." },
+
+  { title:"APGAR Score", type:"cluster", prompt:"Expand APGAR and score each component.",
+    components:["<b>A</b>ppearance: 0=blue all, 1=blue extremities, 2=pink","<b>P</b>ulse: 0=absent, 1=<100, 2=≥100","<b>G</b>rimace: 0=none, 1=grimace, 2=cry","<b>A</b>ctivity: 0=limp, 1=some flexion, 2=active","<b>R</b>espiration: 0=absent, 1=weak/irregular, 2=good cry"],
+    conditions:["Neonatal assessment at 1 and 5 minutes"],
+    patho:"Clinical scoring system to rapidly assess neonatal well-being and need for resuscitation.",
+    pearl:"🎯 Score 7–10 = normal. 4–6 = moderate → stimulate + O₂. <4 = severe → resuscitate. 5-min APGAR more predictive than 1-min." },
+
+  { title:"Polyhydramnios Causes", type:"cluster", prompt:"List causes by mechanism.",
+    components:["<b>↓ Fetal swallowing:</b> Oesophageal atresia, Anencephaly, CNS anomalies","<b>↑ Fetal urination:</b> Macrosomia, TTTS","<b>Maternal:</b> GDM, Rh incompatibility","<b>Idiopathic:</b> 60% of cases"],
+    conditions:["Polyhydramnios (AFI >24 or DVP >8cm)"],
+    patho:"Amniotic fluid = fetal swallowing vs urination balance. Any condition impairing swallowing OR increasing urination → accumulation.",
+    pearl:"🎯 Idiopathic = most common. Always rule out GDM first. Complications: malpresentation, cord prolapse, PPH, preterm labour." },
+
+  { title:"MRKH Syndrome", type:"cluster", prompt:"Describe Mayer-Rokitansky-Küster-Hauser features.",
+    components:["<b>Primary amenorrhoea</b>","<b>Normal secondary sexual characteristics</b>","<b>Absent/rudimentary uterus and upper vagina</b>","Normal <b>46,XX karyotype</b>"],
+    conditions:["MRKH Syndrome — Müllerian aplasia"],
+    patho:"Failure of Müllerian duct development. Ovaries normal → normal oestrogen → normal puberty despite absent uterus.",
+    pearl:"🎯 Distinguish from CAIS (Complete Androgen Insensitivity): also primary amenorrhoea + absent uterus BUT karyotype = 46,XY + absent pubic/axillary hair." },
+
+  { title:"Meigs Syndrome Triad", type:"triad", prompt:"State the triad.",
+    components:["<b>Ovarian fibroma</b> (benign solid tumour)","<b>Ascites</b>","<b>Right-sided pleural effusion</b>"],
+    conditions:["Meigs Syndrome"],
+    patho:"Fluid from tumour surface + diaphragmatic lymphatic channels → fluid transported to right pleural cavity.",
+    pearl:"🎯 Pseudo-Meigs = same triad with non-fibroma (thecoma, Brenner, dermoid). Key: CA-125 can be elevated but resolves after tumour removal." },
+
+  { title:"Ovulation Signs", type:"cluster", prompt:"Name 5 objective signs of ovulation.",
+    components:["<b>Mittelschmerz:</b> Mid-cycle lower abdominal pain","<b>BBT rise</b> 0.2–0.5°C after ovulation (progesterone)","<b>LH surge</b> on urine kit","<b>Cervical mucus:</b> Spinnbarkeit + ferning","<b>USG:</b> Follicle rupture + corpus luteum"],
+    conditions:["Ovulation tracking","Infertility workup"],
+    patho:"Oestrogen surge → LH surge → follicle rupture → corpus luteum secretes progesterone → BBT rise + thick mucus.",
+    pearl:"🎯 Ferning = cervical mucus forms fern pattern under microscope (oestrogen). Disappears post-ovulation. Spinnbarkeit = mucus stretching ≥6 cm = ovulation." },
+],
+
+peds:[
+  { title:"Koplik's Spots", type:"sign", prompt:"Describe location, appearance, condition.",
+    components:["<b>Greyish-white spots</b> on erythematous base","On <b>buccal mucosa</b> opposite lower molars","Appear <b>1–2 days BEFORE rash</b>"],
+    conditions:["Measles (Rubeola)"],
+    patho:"Measles virus infects oral mucosal cells → localised inflammatory reaction → white necrotic foci with surrounding hyperaemia.",
+    pearl:"🎯 Koplik's spots = pathognomonic of measles. Rash = cephalocaudal, starts behind ears. Complications: SSPE (years later), pneumonia, encephalitis." },
+
+  { title:"Gower's Sign", type:"sign", prompt:"Describe sign and condition.",
+    components:["Child rises from floor by:","<b>Rolling to prone position</b>","<b>Pushing up on arms</b>","<b>Walking hands up thighs</b> to stand"],
+    conditions:["Duchenne Muscular Dystrophy","Any proximal muscle weakness"],
+    patho:"Proximal hip/thigh weakness (glutei, quadriceps) → cannot use legs to rise → uses arms to 'climb' up body.",
+    pearl:"🎯 DMD: X-linked recessive. Dystrophin absent. Calf pseudohypertrophy. CK massively elevated. Gower's positive in most myopathies — not specific to DMD alone." },
+
+  { title:"Harrison's Sulcus", type:"sign", prompt:"Describe and explain.",
+    components:["<b>Horizontal groove</b> along lower chest","At level of <b>diaphragmatic attachment</b>","Visible during inspiration"],
+    conditions:["Rickets","Chronic childhood respiratory disease (asthma, bronchiolitis)"],
+    patho:"Soft, poorly mineralised ribs (rickets) + forceful diaphragmatic contraction → ribs pulled inward at attachment → permanent groove.",
+    pearl:"🎯 Other rickets signs: Frontal bossing, Rachitic rosary (costochondral beading), Craniotabes (ping-pong skull), widened wrist epiphyses on X-ray." },
+
+  { title:"Tetralogy of Fallot — 4 Features", type:"tetrad", prompt:"List all 4 components.",
+    components:["<b>Ventricular Septal Defect</b> (VSD) — large, perimembranous","<b>Pulmonary Stenosis</b> (RVOT obstruction)","<b>Overriding Aorta</b> (straddles VSD)","<b>Right Ventricular Hypertrophy</b> (secondary to PS)"],
+    conditions:["Tetralogy of Fallot — most common cyanotic CHD after 1 month"],
+    patho:"PS → right-to-left shunt through VSD → deoxygenated blood into aorta → cyanosis. Severity depends on degree of PS.",
+    pearl:"🎯 Boot-shaped heart on CXR (coeur en sabot). Tet spells → knee-chest position + IV propranolol. Squatting ↑ SVR → ↓ R→L shunt → ↓ cyanosis." },
+
+  { title:"Kawasaki Disease — CRASH Criteria", type:"pentad", prompt:"Fever >5 days PLUS ≥4 of 5 features — list them.",
+    components:["<b>C</b>onjunctival injection (bilateral, non-purulent)","<b>R</b>ash (polymorphous, truncal)","<b>A</b>denopathy (cervical, unilateral, >1.5 cm)","<b>S</b>trawberry tongue / oral changes (red cracked lips)","<b>H</b>ands/feet: erythema, oedema, desquamation"],
+    conditions:["Kawasaki Disease (Mucocutaneous Lymph Node Syndrome)"],
+    patho:"Vasculitis of unknown aetiology → medium vessel inflammation → coronary artery aneurysms in 25% if untreated.",
+    pearl:"🎯 Mnemonic: <em>CRASH</em>. Treatment: IVIG + aspirin. Echo mandatory for coronaries. Most common acquired heart disease in children in developed world." },
+
+  { title:"Pyloric Stenosis Metabolic Derangement", type:"cluster", prompt:"What is the classic metabolic derangement and why?",
+    components:["<b>Hypochloraemic</b>","<b>Hypokalaemic</b>","<b>Metabolic Alkalosis</b>","Paradoxical aciduria (late)"],
+    conditions:["Hypertrophic Pyloric Stenosis"],
+    patho:"Projectile vomiting → loss of HCl → hypochloraemia + alkalosis. Kidneys conserve Na⁺ by excreting H⁺ and K⁺ → worsens alkalosis + hypokalaemia.",
+    pearl:"🎯 Correct ELECTROLYTES FIRST before any surgery. Never operate on an alkalotic, hypokalaemic infant — risk of apnoea under anaesthesia." },
+
+  { title:"Infant Meningitis Signs", type:"cluster", prompt:"Signs in infants different from adults.",
+    components:["<b>Bulging anterior fontanelle</b>","<b>High-pitched cry</b>","<b>Opisthotonus</b> (hyperextension of neck/back)","Poor feeding, drowsiness","Kernig's/Brudzinski's may be ABSENT <6 months"],
+    conditions:["Bacterial Meningitis in Infants"],
+    patho:"Raised ICP → bulging fontanelle. Meningeal irritation → hypertonicity → opisthotonus. Neck stiffness develops only after fontanelle closure.",
+    pearl:"🎯 Never do LP with bulging fontanelle without cranial USS first (herniation risk). Neonates: Group B Strep; Older children: N. meningitidis." },
+
+  { title:"Reye's Syndrome Triad", type:"triad", prompt:"List triad and causal association.",
+    components:["<b>Acute encephalopathy</b>","<b>Fatty liver</b> (hepatomegaly, ↑ LFTs, NO jaundice)","Follows <b>viral illness treated with aspirin</b>"],
+    conditions:["Reye's Syndrome — children"],
+    patho:"Aspirin metabolites + viral infection → mitochondrial dysfunction → impaired β-oxidation → fatty liver + ↑ ammonia → encephalopathy.",
+    pearl:"🎯 Aspirin CONTRAINDICATED in children <16 years for viral illness! Urea cycle enzymes affected → hyperammonaemia. Treat: IV glucose + mannitol." },
+
+  { title:"Intussusception Triad (Peds)", type:"triad", prompt:"Classic triad — paediatric.",
+    components:["<b>Colicky abdominal pain</b> (inconsolable crying in spasms)","<b>Vomiting</b>","<b>Red currant jelly stools</b> (blood + mucus)"],
+    conditions:["Intussusception","Peak: 3 months – 3 years"],
+    patho:"Telescoping → venous congestion → mucosal ischaemia → sloughing → blood + mucus. Sausage mass in RIF.",
+    pearl:"🎯 USS: target/donut sign. Air enema >90% reduction. Older children: look for lead point (Meckel's, polyp) → surgery." },
+
+  { title:"Rickets — Clinical Signs", type:"cluster", prompt:"List 6 clinical signs of rickets.",
+    components:["<b>Craniotabes</b> (ping-pong skull — softened occiput)","<b>Frontal bossing</b>","<b>Rachitic rosary</b> (costochondral beading)","<b>Harrison's sulcus</b>","<b>Bow legs</b> (genu varum) or <b>knock knees</b> (genu valgum)","<b>Widened epiphyses</b> at wrist on X-ray"],
+    conditions:["Nutritional Rickets (Vit D deficiency)","Renal Osteodystrophy","Hypophosphataemic Rickets"],
+    patho:"↓ Vit D → ↓ Ca²⁺ and PO₄³⁻ absorption → poor mineralisation of growing bone → metaphyseal widening, soft bones, deformity.",
+    pearl:"🎯 Serum: ↓ Ca²⁺, ↓ PO₄³⁻, ↑ ALP, ↑ PTH. X-ray: cupping + fraying of metaphyses. Treatment: Vitamin D + Calcium supplementation." },
+],
+
+ophthal:[
+  { title:"Marcus Gunn Pupil (RAPD)", type:"sign", prompt:"Describe swinging torch test findings.",
+    components:["Swinging torch test:","<b>Both pupils dilate when light on affected eye</b>","Pupils constrict normally when light on normal eye","= Relative Afferent Pupillary Defect (RAPD)"],
+    conditions:["Optic neuritis (MS)","Severe retinal disease","Optic nerve compression"],
+    patho:"Afferent limb (CN II) damaged → less light signal from affected eye → less constriction on that side → relative dilation compared to normal eye.",
+    pearl:"🎯 Efferent (CN III) intact → both pupils respond equally via consensual reflex. Anisocoria alone ≠ RAPD. First step in optic neuritis: RAPD + VEP." },
+
+  { title:"Kayser-Fleischer Ring", type:"sign", prompt:"Describe appearance and condition.",
+    components:["<b>Golden-brown ring</b> at periphery of cornea","At level of <b>Descemet's membrane</b>","Best seen at corneal limbus","Requires <b>slit-lamp examination</b>"],
+    conditions:["Wilson's Disease (Hepatolenticular Degeneration)"],
+    patho:"Copper deposits in Descemet's membrane → golden-brown ring at limbus. Disappears with chelation therapy.",
+    pearl:"🎯 Wilson's: AR, ATP7B mutation. Liver disease + neuropsychiatric + KF rings. Low ceruloplasmin + ↑ urine copper. Treat: D-penicillamine or zinc. KF rings = pathognomonic." },
+
+  { title:"Roth's Spots", type:"sign", prompt:"Describe and list conditions.",
+    components:["<b>Oval/flame-shaped retinal haemorrhages</b>","With <b>white/pale centre</b>","Seen on fundoscopy"],
+    conditions:["Infective Endocarditis","Leukaemia","Diabetes","Pernicious anaemia","Hypertensive retinopathy"],
+    patho:"Microemboli or vasculitis → retinal haemorrhage + central fibrin-platelet plug OR lymphocytic infiltration (leukaemia) → white-centred haemorrhage.",
+    pearl:"🎯 On fundoscopy also look for: papilloedema (↑ICP), silver wiring/AV nipping (HT), flame haemorrhages (HT), dot-blot haemorrhages (DR)." },
+
+  { title:"Foster Kennedy Syndrome", type:"sign", prompt:"Differentiate true vs pseudo-FKS.",
+    components:["<b>True FKS:</b> Ipsilateral optic atrophy + Contralateral papilloedema","<b>Pseudo-FKS:</b> Sequential bilateral optic neuritis — one recovered (atrophic), one still swollen"],
+    conditions:["Subfrontal Meningioma (True FKS)","Multiple Sclerosis (Pseudo-FKS)"],
+    patho:"Subfrontal mass compresses one optic nerve (atrophy) + raises ICP → contralateral disc swollen. Pseudo = sequential bilateral optic neuritis mimics.",
+    pearl:"🎯 NEET favourite! Anosmia + unilateral blindness + contralateral papilloedema = Subfrontal/olfactory groove meningioma until proven otherwise." },
+
+  { title:"Hutchinson's Triad", type:"triad", prompt:"Name triad and condition.",
+    components:["<b>Interstitial keratitis</b> (corneal haze, photophobia)","<b>Hutchinson's teeth</b> (notched, peg-shaped upper central incisors)","<b>8th nerve deafness</b>"],
+    conditions:["Late Congenital Syphilis"],
+    patho:"T. pallidum crosses placenta → immune complex in cornea + developmental damage to teeth and cochlea.",
+    pearl:"🎯 Other late congenital syphilis: Saddle nose, Sabre tibia, Clutton's joints, Moon's molars. VDRL + TPHA. Treat: Penicillin." },
+
+  { title:"Rubeosis Iridis", type:"sign", prompt:"Describe and list causes.",
+    components:["<b>Neovascularisation of iris</b>","New vessels on iris surface and into angle","Leads to <b>neovascular glaucoma</b> (NVG)"],
+    conditions:["Advanced Diabetic Retinopathy","Central Retinal Vein Occlusion","Ocular Ischaemic Syndrome"],
+    patho:"Retinal ischaemia → VEGF release → angiogenesis → abnormal new vessels on iris → block trabecular meshwork → ↑ IOP → NVG.",
+    pearl:"🎯 Rubeosis = 3-month glaucoma (occurs ~3 months after CRVO). Treat: PRP + anti-VEGF injections. Urgent — vision threatening." },
+
+  { title:"Leukocoria — Causes", type:"sign", prompt:"List 5 causes of leukocoria (white pupil) in children.",
+    components:["<b>Retinoblastoma</b> (most common malignant)","Congenital cataract","Persistent hyperplastic primary vitreous (PHPV)","Coats' disease","Toxocariasis"],
+    conditions:["Leukocoria — absent red reflex"],
+    patho:"Any lesion replacing normal red reflex (fundal vascularity) with white reflection = leukocoria.",
+    pearl:"🎯 Leukocoria = ophthalmology emergency in a child until retinoblastoma excluded. Can also present as squint. MRI + EUA (exam under anaesthesia)." },
+
+  { title:"Bitot's Spots", type:"sign", prompt:"Describe and condition.",
+    components:["<b>Foamy, greyish-white plaques</b>","On <b>bulbar conjunctiva</b> (temporal side)","Triangular, cannot be wiped off"],
+    conditions:["Vitamin A Deficiency (Xerophthalmia)"],
+    patho:"Vit A deficiency → squamous metaplasia of conjunctival epithelium → mucus-secreting goblet cells replaced → keratinised debris + Corynebacterium xerosis → foamy plaques.",
+    pearl:"🎯 WHO grading: XN (night blindness) → X1A (conjunctival xerosis) → X1B (Bitot's) → X2 (corneal xerosis) → X3A/B (keratomalacia = irreversible blindness)." },
+
+  { title:"Hollenhorst Plaque", type:"sign", prompt:"What is it and significance?",
+    components:["<b>Bright orange-yellow refractile plaques</b>","At retinal artery bifurcations","Seen on fundoscopy"],
+    conditions:["Carotid Atherosclerosis","Cholesterol emboli from carotid plaque"],
+    patho:"Cholesterol crystal from ulcerated carotid plaque → embolises to retinal artery → lodges at bifurcation → reflects light brightly.",
+    pearl:"🎯 Finding = urgent carotid Doppler + cardiology referral. Risk of TIA/stroke. May cause amaurosis fugax (transient monocular blindness). Aspirin + statin immediately." },
+
+  { title:"Amsler Grid", type:"cluster", prompt:"What does it detect?",
+    components:["<b>Grid of horizontal + vertical lines</b> with central dot","Patient covers one eye, looks at central dot","Reports wavy/missing/distorted lines","= Metamorphopsia or scotoma"],
+    conditions:["AMD (Age-related Macular Degeneration)","Central Serous Chorioretinopathy","Macular hole","Diabetic macular oedema"],
+    patho:"Macular pathology distorts retinal receptor alignment → straight lines appear wavy (metamorphopsia) or missing (scotoma).",
+    pearl:"🎯 Central vision lost = macular disease. Peripheral vision lost = glaucoma (arcuate scotoma) / retinal detachment. Amsler = self-monitoring tool for AMD patients." },
+],
+};
+
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let state = {
+  streak: 1,
+  dayCount: 1,
+  mastered: {},   // { 'cvs-0': true, ... }
+  reviewed: {},   // { 'cvs-0': 'good', ... }
+  currentSubject: null,
+};
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('cr_state');
+    if (s) Object.assign(state, JSON.parse(s));
+  } catch(e) {}
+}
+
+function saveState() {
+  try { localStorage.setItem('cr_state', JSON.stringify(state)); } catch(e) {}
+}
+
+function getMastered(subjId) {
+  return Object.keys(state.mastered).filter(k => k.startsWith(subjId+'-') && state.mastered[k]).length;
+}
+
+function getReviewed(subjId) {
+  return Object.keys(state.reviewed).filter(k => k.startsWith(subjId+'-')).length;
+}
+
+function totalMastered() {
+  return Object.values(state.mastered).filter(Boolean).length;
+}
+
+function totalReviewed() {
+  return Object.keys(state.reviewed).length;
+}
+
+// ═══════════════════════════════════════
+//  VIEWS
+// ═══════════════════════════════════════
+const VIEWS = ['home','cards','progress','plan','tips'];
+
+function showView(name) {
+  // If cards view without subject, show home
+  if (name === 'cards' && !state.currentSubject) { name = 'home'; }
+
+  VIEWS.forEach(v => {
+    document.getElementById(`view-${v}`)?.classList.remove('active');
+    document.getElementById(`nav-${v}`)?.classList.remove('active');
+  });
+  document.getElementById(`view-${name}`)?.classList.add('active');
+  document.getElementById(`nav-${name}`)?.classList.add('active');
+  document.getElementById('content').scrollTop = 0;
+
+  if (name === 'progress') renderProgress();
+  if (name === 'plan') renderPlan();
+  if (name === 'home') renderHome();
+}
+
+function openSubject(subjId) {
+  state.currentSubject = subjId;
+  const subj = SUBJECTS.find(s => s.id === subjId);
+  document.getElementById('cardsViewTitle').textContent = `${subj.icon} ${subj.sub}`;
+  document.getElementById('cardsViewCount').textContent = `${CARDS[subjId].length} cards`;
+  renderCardList(subjId);
+  showView('cards');
+}
+
+// ═══════════════════════════════════════
+//  RENDER HOME
+// ═══════════════════════════════════════
+function renderHome() {
+  document.getElementById('statDay').textContent = state.dayCount;
+  document.getElementById('statMastered').textContent = totalMastered();
+  document.getElementById('statStreak').textContent = state.streak;
+  document.getElementById('streakPill').textContent = `🔥 ${state.streak} day${state.streak>1?'s':''}`;
+  const pct = ((state.dayCount / 365) * 100).toFixed(1);
+  document.getElementById('heroProgPct').textContent = pct + '%';
+  document.getElementById('heroProgBar').style.width = pct + '%';
+
+  const grid = document.getElementById('subjectGrid');
+  grid.innerHTML = SUBJECTS.map(s => {
+    const total = CARDS[s.id].length;
+    const mastered = getMastered(s.id);
+    const reviewed = getReviewed(s.id);
+    const pct = Math.round((reviewed / total) * 100);
+    return `
+      <div class="subj-card ${s.status === 'current' ? 'current' : ''}" onclick="openSubject('${s.id}')">
+        <div class="subj-icon">${s.icon}</div>
+        <div class="subj-name">${s.sub}</div>
+        <div class="subj-meta">${s.name} · ${mastered}/${total} mastered</div>
+        <div class="subj-prog"><div class="subj-prog-fill" style="width:${pct}%"></div></div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+//  RENDER CARD LIST
+// ═══════════════════════════════════════
+function renderCardList(subjId) {
+  const cards = CARDS[subjId];
+  const list = document.getElementById('cardList');
+  list.innerHTML = cards.map((c, i) => {
+    const key = `${subjId}-${i}`;
+    const isMastered = state.mastered[key];
+    return `
+      <div class="fc ${isMastered ? 'mastered' : ''}" id="fc-${key}">
+        <div class="fc-front" onclick="toggleFC('${key}')">
+          <div class="fc-num">${String(i+1).padStart(2,'0')}</div>
+          <div class="fc-q">
+            <div class="fc-title">${c.title}</div>
+            <div class="fc-prompt">${c.prompt}</div>
+          </div>
+          <span class="fc-badge b-${c.type}">${c.type}</span>
+        </div>
+        <div class="fc-divider" id="div-${key}" style="display:none"></div>
+        <div class="fc-back" id="back-${key}">
+          <div class="back-block">
+            <div class="back-lbl">Components</div>
+            <ul class="comp-list">${c.components.map(x=>`<li>${x}</li>`).join('')}</ul>
+          </div>
+          <div class="back-block">
+            <div class="back-lbl">Associated Condition(s)</div>
+            <div class="cond-tags">${c.conditions.map(x=>`<span class="cond-tag">${x}</span>`).join('')}</div>
+          </div>
+          <div class="back-block">
+            <div class="back-lbl">Pathophysiology</div>
+            <div class="back-body">${c.patho}</div>
+          </div>
+          <div class="back-block">
+            <div class="back-lbl">Clinical Pearl</div>
+            <div class="pearl-box">${c.pearl}</div>
+          </div>
+          <div class="rate-row">
+            <button class="rate-btn rb-again" onclick="rateCard('${key}','again')">⟳<br>Again</button>
+            <button class="rate-btn rb-hard"  onclick="rateCard('${key}','hard')">△<br>Hard</button>
+            <button class="rate-btn rb-good"  onclick="rateCard('${key}','good')">✓<br>Good</button>
+            <button class="rate-btn rb-easy"  onclick="rateCard('${key}','easy')">★<br>Easy</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleFC(key) {
+  const back = document.getElementById(`back-${key}`);
+  const div  = document.getElementById(`div-${key}`);
+  const open = back.classList.toggle('open');
+  div.style.display = open ? 'block' : 'none';
+}
+
+function rateCard(key, rating) {
+  state.reviewed[key] = rating;
+  if (rating === 'easy') {
+    state.mastered[key] = true;
+    document.getElementById(`fc-${key}`)?.classList.add('mastered');
+  } else {
+    state.mastered[key] = false;
+    document.getElementById(`fc-${key}`)?.classList.remove('mastered');
+  }
+  saveState();
+
+  const msgs = { again:'Added to repeat list 🔄', hard:'Marked as hard 💪', good:'Good recall ✓', easy:'Mastered! ⭐' };
+  showToast(msgs[rating]);
+
+  // Close card
+  const back = document.getElementById(`back-${key}`);
+  const div  = document.getElementById(`div-${key}`);
+  if (back) back.classList.remove('open');
+  if (div)  div.style.display = 'none';
+
+  // Scroll to next card
+  setTimeout(() => {
+    const parts = key.split('-');
+    const nextIdx = parseInt(parts[parts.length-1]) + 1;
+    const nextKey = parts.slice(0,-1).join('-') + '-' + nextIdx;
+    const nextEl = document.getElementById(`fc-${nextKey}`);
+    if (nextEl) nextEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 200);
+}
+
+// ═══════════════════════════════════════
+//  RENDER PROGRESS
+// ═══════════════════════════════════════
+function renderProgress() {
+  document.getElementById('pv-mastered').textContent = totalMastered();
+  document.getElementById('pv-streak').textContent = state.streak;
+  document.getElementById('pv-reviewed').textContent = totalReviewed();
+  document.getElementById('pv-days').textContent = state.dayCount;
+
+  const list = document.getElementById('subjProgList');
+  list.innerHTML = SUBJECTS.map(s => {
+    const total = CARDS[s.id].length;
+    const mastered = getMastered(s.id);
+    const pct = Math.round((mastered / total) * 100);
+    return `
+      <div class="spl-item">
+        <div class="spl-top">
+          <div class="spl-icon">${s.icon}</div>
+          <div class="spl-name">${s.sub}</div>
+          <div class="spl-pct">${pct}%</div>
+        </div>
+        <div class="spl-bar"><div class="spl-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+//  RENDER YEAR PLAN
+// ═══════════════════════════════════════
+function renderPlan() {
+  const list = document.getElementById('planList');
+  list.innerHTML = YEAR_PLAN.map((p, i) => {
+    const statusClass = p.status === 'current' ? 'plan-current' : '';
+    const dotClass = p.status === 'current' ? 'd-current' : p.status === 'done' ? 'd-done' : 'd-upcoming';
+    const badgeClass = p.status === 'current' ? 'pb-current' : p.status === 'done' ? 'pb-done' : 'pb-upcoming';
+    const badgeText = p.status === 'current' ? 'NOW' : p.status === 'done' ? 'DONE' : String(i+1).padStart(2,'0');
+    return `
+      <div class="plan-item ${statusClass}">
+        <div class="plan-dot ${dotClass}"></div>
+        <div class="plan-info">
+          <div class="plan-name">${p.name}</div>
+          <div class="plan-weeks">${p.weeks} · 10 cards/day</div>
+        </div>
+        <span class="plan-badge ${badgeClass}">${badgeText}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ═══════════════════════════════════════
+//  PWA INSTALL
+// ═══════════════════════════════════════
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const banner = document.getElementById('installBanner');
+  if (banner) banner.style.display = 'flex';
+});
+
+document.getElementById('installBtn')?.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') showToast('App installed! 🎉');
+  deferredPrompt = null;
+  document.getElementById('installBanner').style.display = 'none';
+});
+
+document.getElementById('dismissBanner')?.addEventListener('click', () => {
+  document.getElementById('installBanner').style.display = 'none';
+});
+
+// ═══════════════════════════════════════
+//  SERVICE WORKER
+// ═══════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+loadState();
+renderHome();
+
+</script>
+</body>
+</html>
